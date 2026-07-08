@@ -18,10 +18,21 @@
 // }
 
 import Fastify from "fastify";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
 import env from "./config/env.js";
 import prismaPlugin from "./plugins/prisma.plugin.js";
 import mongoosePlugin from "./plugins/mongoose.plugin.js";
 import redisPlugin from "./plugins/redis.plugin.js";
+import mailerPlugin from "./plugins/mailer.plugin.js";
+import authPlugin from "./plugins/auth.plugin.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
+import authIndex from "./modules/auth/authIndex.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const swaggerPath = path.join(__dirname, "../swagger.json");
 
 export async function buildApp() {
   const app = Fastify({
@@ -31,6 +42,52 @@ export async function buildApp() {
   await app.register(prismaPlugin);
   await app.register(mongoosePlugin);
   await app.register(redisPlugin);
+
+  await app.register(mailerPlugin);
+  await app.register(authPlugin);
+  app.setErrorHandler(errorHandler);
+  await app.register(authIndex);
+
+  app.get("/swagger.json", async (req, reply) => {
+    try {
+      const data = await fs.readFile(swaggerPath, "utf8");
+      return reply.type("application/json").send(JSON.parse(data));
+    } catch (err) {
+      return reply.code(404).send({ success: false, message: "Swagger file not found" });
+    }
+  });
+
+  app.get("/docs", async (req, reply) => {
+    reply.type("text/html");
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rhynk Auth API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+  <style>
+    body { margin: 0; background: #fafafa; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    window.onload = () => {
+      window.ui = SwaggerUIBundle({
+        url: '/swagger.json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis
+        ],
+        layout: "BaseLayout"
+      });
+    };
+  </script>
+</body>
+</html>`;
+  });
 
   app.get("/health", async (req, res) => {
     const checks = { postgres: false, mongodb: false, redis: false };

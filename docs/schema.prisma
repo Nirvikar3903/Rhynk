@@ -1,0 +1,349 @@
+// ============================================================================
+// RHYNK — PostgreSQL schema (Prisma)
+// Region: ap-south-1 (Mumbai) · Provider: Supabase
+// All IDs: UUID v4. All timestamps: UTC (timestamptz).
+// This is the SYSTEM OF RECORD for identity, structure, and relationships.
+// High-write ephemeral data (messages, stories, presence, room playback state)
+// intentionally lives OUTSIDE Postgres — see MongoDB / Redis sections of the PRD.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// ENUMS
+// ----------------------------------------------------------------------------
+
+enum ConversationType {
+  DM
+  GROUP
+  CHANNEL
+}
+
+enum MemberRole {
+  MEMBER
+  ADMIN
+  OWNER
+}
+
+enum SongSourceType {
+  UPLOADED
+  JIOSAAVN
+  RADIO
+}
+
+enum DeviceType {
+  IOS
+  ANDROID
+  WEB
+}
+
+enum NotificationType {
+  NEW_MESSAGE
+  MENTION
+  MUSIC_ROOM_INVITE
+  CONTACT_REQUEST
+  CALL_MISSED
+  SYSTEM
+}
+
+enum CallType {
+  VOICE
+  VIDEO
+}
+
+enum CallStatus {
+  MISSED
+  DECLINED
+  COMPLETED
+  FAILED
+}
+
+// ----------------------------------------------------------------------------
+// IDENTITY
+// ----------------------------------------------------------------------------
+
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  username    String   @unique @db.VarChar(32)
+  phone       String?  @unique @db.VarChar(20)
+  email       String?  @unique @db.VarChar(255)
+  passwordHash String? @map("password_hash") // null for phone-OTP-only / OAuth-only users
+  googleId    String?  @unique @map("google_id")
+
+  avatarUrl   String?  @map("avatar_url")
+  bio         String?  @db.VarChar(160)
+  statusText  String?  @map("status_text") @db.VarChar(120)
+
+  isVerified  Boolean  @default(false) @map("is_verified")
+  lastSeenAt  DateTime? @map("last_seen_at")
+
+  // GDPR / DPDPA — soft delete, never hard-delete a row with FK fan-out
+  deletedAt   DateTime? @map("deleted_at")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  devices              Device[]
+  createdConversations Conversation[]        @relation("ConversationCreator")
+  memberships          ConversationMember[]
+  createdRooms         MusicRoom[]           @relation("RoomCreator")
+  djRooms              MusicRoom[]           @relation("RoomDJ")
+  uploadedSongs        Song[]
+  playlists            Playlist[]
+  likedSongs           LikedSong[]
+  contactsOf           UserContact[]         @relation("ContactOwner")
+  contactedBy          UserContact[]         @relation("ContactTarget")
+  blockedUsers         BlockedUser[]         @relation("Blocker")
+  blockedBy            BlockedUser[]         @relation("Blocked")
+  notifications        Notification[]
+  notificationPrefs    NotificationPreference[]
+  callsInitiated       CallLog[]             @relation("CallInitiator")
+
+  @@index([phone])
+  @@index([email])
+  @@map("users")
+}
+
+// Multi-device support: one user, many logged-in devices.
+// FCM tokens live here, NOT on User — a user can have a phone + web + tablet
+// session simultaneously, each needing its own push target and refresh-token
+// lineage (rotation / revocation is per-device, per PRD §12.1 token family model).
+model Device {
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @map("user_id") @db.Uuid
+  deviceType   DeviceType @map("device_type")
+  fcmToken     String?    @map("fcm_token")
+  pushEnabled  Boolean    @default(true) @map("push_enabled")
+  lastActiveAt DateTime   @default(now()) @map("last_active_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("devices")
+}
+
+model UserContact {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  contactId  String   @map("contact_id") @db.Uuid
+  nickname   String?
+  addedAt    DateTime @default(now()) @map("added_at")
+
+  owner  User @relation("ContactOwner", fields: [userId], references: [id], onDelete: Cascade)
+  target User @relation("ContactTarget", fields: [contactId], references: [id], onDelete: Cascade)
+
+  // Directed edge, as PRD notes — query symmetrically (WHERE user_id = X OR contact_id = X)
+  @@unique([userId, contactId])
+  @@index([contactId])
+  @@map("user_contacts")
+}
+
+model BlockedUser {
+  id         String   @id @default(uuid()) @db.Uuid
+  blockerId  String   @map("blocker_id") @db.Uuid
+  blockedId  String   @map("blocked_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@map("blocked_users")
+}
+
+// ----------------------------------------------------------------------------
+// CONVERSATIONS & MEMBERSHIP
+// ----------------------------------------------------------------------------
+
+model Conversation {
+  id        String           @id @default(uuid()) @db.Uuid
+  type      ConversationType
+  name      String?          // null for DMs, required for GROUP/CHANNEL
+  avatarUrl String?          @map("avatar_url")
+  createdBy String           @map("created_by") @db.Uuid
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  creator User                 @relation("ConversationCreator", fields: [createdBy], references: [id])
+  members ConversationMember[]
+  room    MusicRoom?
+  notificationPrefs NotificationPreference[]
+
+  @@index([type])
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String     @id @default(uuid()) @db.Uuid
+  conversationId String     @map("conversation_id") @db.Uuid
+  userId         String     @map("user_id") @db.Uuid
+  role           MemberRole @default(MEMBER)
+  joinedAt       DateTime   @default(now()) @map("joined_at")
+  lastReadAt     DateTime?  @map("last_read_at") // drives unread-count + read-receipt cursor
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Composite unique — a user can only be in a conversation once.
+  // This is also the index Postgres uses to answer "is user X in conversation Y"
+  // on every single message-send / socket auth check, so it must stay tight.
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_members")
+}
+
+// ----------------------------------------------------------------------------
+// MUSIC
+// ----------------------------------------------------------------------------
+
+// One row per conversation that has ever started a room (1:1 with Conversation).
+// LIVE playback state (position_ms, is_playing, queue) is intentionally NOT here —
+// it lives in Redis because it mutates multiple times per second per active room
+// and Postgres should never see that write volume. This table is the durable
+// "room exists / who owns it" record; Redis is the hot path.
+model MusicRoom {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @unique @map("conversation_id") @db.Uuid
+  createdBy      String   @map("created_by") @db.Uuid
+  djUserId       String?  @map("dj_user_id") @db.Uuid
+  isPlaying      Boolean  @default(false) @map("is_playing") // last-known snapshot, reconciled from Redis on room close
+  isPrivate      Boolean  @default(false) @map("is_private")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  creator      User         @relation("RoomCreator", fields: [createdBy], references: [id])
+  dj           User?        @relation("RoomDJ", fields: [djUserId], references: [id])
+
+  @@map("music_rooms")
+}
+
+model Song {
+  id         String         @id @default(uuid()) @db.Uuid
+  uploadedBy String?        @map("uploaded_by") @db.Uuid // null for jiosaavn/radio sourced songs
+  title      String
+  artist     String
+  album      String?
+  sourceType SongSourceType @map("source_type")
+  sourceUrl  String?        @map("source_url") // external JioSaavn/radio stream reference
+  fileUrl    String?        @map("file_url")   // Cloudflare R2 object URL for uploaded songs
+  durationMs Int            @map("duration_ms")
+  coverUrl   String?        @map("cover_url")
+  playCount  Int            @default(0) @map("play_count")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  uploader      User?           @relation(fields: [uploadedBy], references: [id])
+  playlistSongs PlaylistSong[]
+  likedBy       LikedSong[]
+
+  @@index([sourceType])
+  @@index([title])
+  @@map("songs")
+}
+
+model Playlist {
+  id        String   @id @default(uuid()) @db.Uuid
+  ownerId   String   @map("owner_id") @db.Uuid
+  name      String
+  isPublic  Boolean  @default(false) @map("is_public")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  owner User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  songs PlaylistSong[]
+
+  @@index([ownerId])
+  @@map("playlists")
+}
+
+model PlaylistSong {
+  id         String @id @default(uuid()) @db.Uuid
+  playlistId String @map("playlist_id") @db.Uuid
+  songId     String @map("song_id") @db.Uuid
+  position   Int    // drag-drop ordering; re-sequenced on reorder, not a dense array
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  song     Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, songId])
+  @@index([playlistId, position])
+  @@map("playlist_songs")
+}
+
+// "Liked songs" is its own join table rather than a special playlist row —
+// keeps the semantics (like vs. curated playlist) and query patterns separate.
+model LikedSong {
+  userId    String   @map("user_id") @db.Uuid
+  songId    String   @map("song_id") @db.Uuid
+  likedAt   DateTime @default(now()) @map("liked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  song Song @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@id([userId, songId])
+  @@map("liked_songs")
+}
+
+// ----------------------------------------------------------------------------
+// NOTIFICATIONS
+// ----------------------------------------------------------------------------
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?            // deep-link payload: conversation_id, room_id, etc.
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+// Per-conversation mute / notification-level preference (F-47).
+model NotificationPreference {
+  userId         String  @map("user_id") @db.Uuid
+  conversationId String  @map("conversation_id") @db.Uuid
+  muted          Boolean @default(false)
+  mutedUntil     DateTime? @map("muted_until") // null + muted=true => muted indefinitely
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conversationId])
+  @@map("notification_preferences")
+}
+
+// ----------------------------------------------------------------------------
+// CALLS (Phase 4b)
+// ----------------------------------------------------------------------------
+
+// WebRTC signaling itself is ephemeral (Socket.IO), but the CALL RECORD —
+// who called whom, duration, outcome — is structured history that belongs
+// in Postgres, not Mongo (low write volume, needs relational joins for
+// "recent calls" screens).
+model CallLog {
+  id          String     @id @default(uuid()) @db.Uuid
+  conversationId String  @map("conversation_id") @db.Uuid
+  initiatedBy String     @map("initiated_by") @db.Uuid
+  callType    CallType   @map("call_type")
+  status      CallStatus
+  startedAt   DateTime   @map("started_at")
+  endedAt     DateTime?  @map("ended_at")
+  durationSec Int?       @map("duration_sec")
+
+  initiator User @relation("CallInitiator", fields: [initiatedBy], references: [id])
+
+  @@index([conversationId, startedAt(sort: Desc)])
+  @@map("call_logs")
+}
