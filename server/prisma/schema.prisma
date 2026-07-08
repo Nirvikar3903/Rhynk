@@ -6,3 +6,48 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum DeviceType {
+  IOS
+  ANDROID
+  WEB
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  phone        String?  @unique
+  email        String?  @unique
+  passwordHash String?
+  googleId     String?  @unique
+
+  avatarUrl    String?
+  bio          String?
+  statusText   String?
+
+  isVerified   Boolean  @default(false)
+  lastSeenAt   DateTime?
+  deletedAt    DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  devices      Device[]
+
+  @@map("users")
+}
+
+model Device {
+  id           String     @id @default(uuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  deviceType   DeviceType
+  fcmToken     String?
+
+  lastActiveAt DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+
+  @@index([userId])
+  @@map("devices")
+}
