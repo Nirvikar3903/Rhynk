@@ -1,7 +1,7 @@
 import { AuthRepository } from './auth.repository.js';
 import { AuthService } from './auth.service.js';
 import { AuthController } from './auth.controller.js';
-import authRoutes from './auth.route.js';
+import authRoutes from './auth.routes.js';
 
 // authIndex: The main entry point for the Auth Module.
 // It initializes and injects dependencies (Prisma, Redis, Email utility)
