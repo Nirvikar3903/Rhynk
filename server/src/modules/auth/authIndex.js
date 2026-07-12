@@ -10,8 +10,8 @@ export default async function authIndex(fastify) {
   // 1. Initialize Repository with Postgres client (fastify.prisma)
   const repository = new AuthRepository(fastify.prisma);
   
-  // 2. Initialize Service with Repository, Redis client, and Send OTP Email utility
-  const service = new AuthService(repository, fastify.redis, fastify.sendOtpEmail);
+  // 2. Initialize Service with Repository, Redis client, and Send Email utility
+  const service = new AuthService(repository, fastify.redis, fastify.sendEmail);
   
   // 3. Initialize Controller with Service
   const controller = new AuthController(service);

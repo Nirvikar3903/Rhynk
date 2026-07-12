@@ -9,10 +9,10 @@ const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // Refresh tokens expire in 7 days
 // AuthService: Implements the core business logic of the authentication system.
 // It integrates the database repository, Redis cache/session store, and email service.
 export class AuthService {
-  constructor(repository, redis, sendOtpEmail) {
+  constructor(repository, redis, sendEmail) {
     this.repository = repository;
     this.redis = redis;
-    this.sendOtpEmail = sendOtpEmail;
+    this.sendEmail = sendEmail;
   }
 
   // sendOtp: Generates a 6-digit random OTP code, stores it in Redis,
@@ -36,13 +36,24 @@ export class AuthService {
       .set(cooldownKey, '1', 'EX', RESEND_COOLDOWN_SECONDS)
       .exec();
 
-    await this.sendOtpEmail(email, otp);
+    let name = email;
+    try {
+      const user = await this.repository.findUserByEmail(email);
+      if (user) {
+        name = user.name || user.username || email;
+      }
+    } catch (err) {
+      // Log error but don't block OTP dispatch
+      console.error('Failed to lookup name for OTP email:', err);
+    }
+
+    await this.sendEmail(email, 'otp_verification', { otp, username: name });
   }
 
   // register: Signs up a new user. 
   // If the email is already registered but unverified, it automatically resends the OTP.
   // Otherwise, it hashes the password, inserts the user row, and sends the first OTP.
-  async register({ username, email, password }) {
+  async register({ username, email, password, name }) {
     const existingUser = await this.repository.findUserByEmail(email);
 
     if (existingUser) {
@@ -56,7 +67,7 @@ export class AuthService {
     }
 
     const passwordHash = await hashPassword(password);
-    const user = await this.repository.createUser({ username, email, passwordHash });
+    const user = await this.repository.createUser({ username, email, passwordHash, name });
 
     await this.sendOtp(email);
     return { email, userId: user.id, isVerified: false };
@@ -85,6 +96,10 @@ export class AuthService {
     await this.repository.verifyUser(user.id);
     await this.redis.del(otpKey);
 
+    // Asynchronously trigger the welcome email upon successful verification
+    this.sendEmail(user.email, 'welcome_email', { username: user.name || user.username || user.email })
+      .catch(err => console.error('Failed to send welcome email:', err));
+
     const tokens = await this.issueTokens({ userId: user.id, deviceId, deviceType });
 
     return {
@@ -107,14 +122,14 @@ export class AuthService {
     const user = await this.repository.findUserByEmail(email);
 
     if (!user || !user.passwordHash) {
-      const error = new Error('Invalid credentials');
+      const error = new Error('Please enter valid credentials');
       error.code = 'INVALID_CREDENTIALS';
       throw error;
     }
 
     const isMatch = await comparePassword(password, user.passwordHash);
     if (!isMatch) {
-      const error = new Error('Invalid credentials');
+      const error = new Error('Please enter valid credentials');
       error.code = 'INVALID_CREDENTIALS';
       throw error;
     }

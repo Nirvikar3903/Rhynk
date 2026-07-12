@@ -20,12 +20,13 @@ export class AuthRepository {
   }
 
   // createUser: Inserts a new unverified user row with hashed password details.
-  async createUser({ username, email, passwordHash }) {
+  async createUser({ username, email, passwordHash, name }) {
     return this.prisma.user.create({
       data: {
         username,
         email,
         passwordHash,
+        name,
         isVerified: false,
       },
     });

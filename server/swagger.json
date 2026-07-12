@@ -76,7 +76,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["username", "email", "password"],
+                "required": ["username", "email", "password", "name"],
                 "properties": {
                   "username": {
                     "type": "string",
@@ -93,6 +93,12 @@
                     "type": "string",
                     "minLength": 6,
                     "example": "supersecurepassword"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50,
+                    "example": "John Doe"
                   }
                 }
               }

@@ -3,11 +3,12 @@
 export const registerSchema = {
   body: {
     type: 'object',
-    required: ['username', 'email', 'password'],
+    required: ['username', 'email', 'password', 'name'],
     properties: {
       username: { type: 'string', minLength: 3, maxLength: 30 },
       email: { type: 'string', pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$' },
-      password: { type: 'string', minLength: 6 }
+      password: { type: 'string', minLength: 6 },
+      name: { type: 'string', minLength: 1, maxLength: 50 }
     }
   }
 };
