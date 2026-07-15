@@ -29,6 +29,7 @@ import mailerPlugin from "./plugins/mailer.plugin.js";
 import authPlugin from "./plugins/auth.plugin.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import authIndex from "./modules/auth/authIndex.js";
+import userIndex from "./modules/user/userIndex.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,6 +48,7 @@ export async function buildApp() {
   await app.register(authPlugin);
   app.setErrorHandler(errorHandler);
   await app.register(authIndex);
+  await app.register(userIndex);
 
   app.get("/swagger.json", async (req, reply) => {
     try {

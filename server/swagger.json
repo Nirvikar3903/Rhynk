@@ -77,7 +77,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["username", "email", "password"],
+                "required": [
+                  "username",
+                  "email",
+                  "password"
+                ],
                 "properties": {
                   "username": {
                     "type": "string",
@@ -131,7 +135,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/auth/verify-otp": {
@@ -144,7 +151,12 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email", "otp", "deviceId", "deviceType"],
+                "required": [
+                  "email",
+                  "otp",
+                  "deviceId",
+                  "deviceType"
+                ],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -162,7 +174,11 @@
                   },
                   "deviceType": {
                     "type": "string",
-                    "enum": ["IOS", "ANDROID", "WEB"],
+                    "enum": [
+                      "IOS",
+                      "ANDROID",
+                      "WEB"
+                    ],
                     "example": "WEB"
                   }
                 }
@@ -201,7 +217,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/auth/login": {
@@ -214,7 +233,12 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email", "password", "deviceId", "deviceType"],
+                "required": [
+                  "email",
+                  "password",
+                  "deviceId",
+                  "deviceType"
+                ],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -231,7 +255,11 @@
                   },
                   "deviceType": {
                     "type": "string",
-                    "enum": ["IOS", "ANDROID", "WEB"],
+                    "enum": [
+                      "IOS",
+                      "ANDROID",
+                      "WEB"
+                    ],
                     "example": "WEB"
                   }
                 }
@@ -270,7 +298,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/auth/resend-otp": {
@@ -283,7 +314,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email"],
+                "required": [
+                  "email"
+                ],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -326,7 +359,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/auth/refresh": {
@@ -339,7 +375,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["refreshToken", "deviceId"],
+                "required": [
+                  "refreshToken",
+                  "deviceId"
+                ],
                 "properties": {
                   "refreshToken": {
                     "type": "string",
@@ -385,7 +424,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/auth/logout": {
@@ -403,7 +445,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["deviceId"],
+                "required": [
+                  "deviceId"
+                ],
                 "properties": {
                   "deviceId": {
                     "type": "string",
@@ -435,7 +479,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/auth/forgot-password/request": {
@@ -448,7 +495,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["username", "email"],
+                "required": [
+                  "username",
+                  "email"
+                ],
                 "properties": {
                   "username": {
                     "type": "string",
@@ -507,7 +557,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/auth/forgot-password/verify": {
@@ -520,7 +573,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email", "otp"],
+                "required": [
+                  "email",
+                  "otp"
+                ],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -577,7 +633,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/auth/forgot-password/reset": {
@@ -590,7 +649,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email", "resetToken", "newPassword"],
+                "required": [
+                  "email",
+                  "resetToken",
+                  "newPassword"
+                ],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -642,7 +705,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/users/me": {
@@ -675,7 +741,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Users"
+        ]
       },
       "patch": {
         "summary": "Update user profile",
@@ -739,7 +808,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Users"
+        ]
       }
     },
     "/users/{id}": {
@@ -794,7 +866,10 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Users"
+        ]
       }
     },
     "/users/search": {
@@ -839,8 +914,21 @@
               }
             }
           }
-        }
+        },
+        "tags": [
+          "Users"
+        ]
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User registration, OTP verification, login, refresh, logout, and password recovery"
+    },
+    {
+      "name": "Users",
+      "description": "User profile retrieval, updates, and search"
+    }
+  ]
 }

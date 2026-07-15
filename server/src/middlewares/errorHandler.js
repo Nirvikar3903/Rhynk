@@ -12,6 +12,7 @@ const CODE_TO_STATUS = {
   SESSION_REVOKED: 401,
   RATE_LIMITED: 429,
   RESET_TOKEN_INVALID: 400,
+  USERNAME_TAKEN: 409,
 };
 
 export function errorHandler(error, request, reply) {
