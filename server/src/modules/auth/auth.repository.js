@@ -20,13 +20,12 @@ export class AuthRepository {
   }
 
   // createUser: Inserts a new unverified user row with hashed password details.
-  async createUser({ username, email, passwordHash, name }) {
+  async createUser({ username, email, passwordHash }) {
     return this.prisma.user.create({
       data: {
         username,
         email,
         passwordHash,
-        name,
         isVerified: false,
       },
     });
@@ -37,6 +36,14 @@ export class AuthRepository {
     return this.prisma.user.update({
       where: { id },
       data: { isVerified: true },
+    });
+  }
+
+  // updatePassword: Updates a user's password hash in the database.
+  async updatePassword(id, passwordHash) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { passwordHash },
     });
   }
 

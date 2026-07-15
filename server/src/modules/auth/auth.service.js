@@ -1,8 +1,9 @@
+import crypto from 'crypto';
 import { hashPassword, comparePassword } from '../../utils/hash.util.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt.util.js';
 
 // Expiry and cooldown configurations in seconds
-const OTP_TTL_SECONDS = 60; // OTP is valid for 60 seconds
+const OTP_TTL_SECONDS = 180; // OTP is valid for 3 minutes (180 seconds)
 const RESEND_COOLDOWN_SECONDS = 30; // Resending OTP has a 30-second cooldown
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // Refresh tokens expire in 7 days
 
@@ -47,13 +48,13 @@ export class AuthService {
       console.error('Failed to lookup name for OTP email:', err);
     }
 
-    await this.sendEmail(email, 'otp_verification', { otp, username: name });
+    await this.sendEmail(email, 'otp_verification', { otp, username: name, expiry: '3 minutes' });
   }
 
   // register: Signs up a new user. 
   // If the email is already registered but unverified, it automatically resends the OTP.
   // Otherwise, it hashes the password, inserts the user row, and sends the first OTP.
-  async register({ username, email, password, name }) {
+  async register({ username, email, password }) {
     const existingUser = await this.repository.findUserByEmail(email);
 
     if (existingUser) {
@@ -67,7 +68,7 @@ export class AuthService {
     }
 
     const passwordHash = await hashPassword(password);
-    const user = await this.repository.createUser({ username, email, passwordHash, name });
+    const user = await this.repository.createUser({ username, email, passwordHash });
 
     await this.sendOtp(email);
     return { email, userId: user.id, isVerified: false };
@@ -254,6 +255,109 @@ export class AuthService {
     const sessionKey = `session:${userId}:${deviceId}`;
     await this.redis.del(sessionKey);
     await this.repository.deleteDevice(deviceId);
+    return { success: true };
+  }
+
+  // forgotPasswordRequest: Handles requesting a password reset OTP.
+  // Verifies that a user exists with matching username and email, and that they are verified.
+  async forgotPasswordRequest({ username, email }) {
+    const user = await this.repository.findUserByEmail(email);
+
+    if (!user || user.username !== username) {
+      const error = new Error('Invalid email or username');
+      error.code = 'INVALID_CREDENTIALS';
+      throw error;
+    }
+
+    if (!user.isVerified) {
+      const error = new Error('Email is not verified');
+      error.code = 'EMAIL_NOT_VERIFIED';
+      throw error;
+    }
+
+    const cooldownKey = `forgot-password:cooldown:${email}`;
+    const hasCooldown = await this.redis.get(cooldownKey);
+    if (hasCooldown) {
+      const error = new Error('OTP resend cooldown active');
+      error.code = 'OTP_COOLDOWN';
+      throw error;
+    }
+
+    // Generate random 6-digit number string
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpKey = `forgot-password:otp:${email}`;
+
+    // Redis transaction (multi) to write the OTP and its cooldown concurrently
+    await this.redis.multi()
+      .set(otpKey, otp, 'EX', 300) // OTP is valid for 5 minutes (300 seconds)
+      .set(cooldownKey, '1', 'EX', 30) // Resend OTP cooldown of 30 seconds
+      .exec();
+
+    await this.sendEmail(email, 'otp_verification', { 
+      otp, 
+      username: user.name || user.username || email,
+      expiry: '5 minutes'
+    });
+
+    return { email };
+  }
+
+  // forgotPasswordVerify: Verifies the OTP sent for password reset.
+  // If valid, issues a short-lived reset token for password update.
+  async forgotPasswordVerify({ email, otp }) {
+    const otpKey = `forgot-password:otp:${email}`;
+    const storedOtp = await this.redis.get(otpKey);
+
+    if (!storedOtp || storedOtp !== otp) {
+      const error = new Error('Invalid or expired OTP');
+      error.code = 'OTP_INVALID';
+      throw error;
+    }
+
+    // Generate a secure reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenKey = `forgot-password:reset-token:${email}`;
+
+    // Save reset token in Redis for 15 minutes
+    await this.redis.set(resetTokenKey, resetToken, 'EX', 15 * 60);
+
+    // Delete OTP after verification to prevent reuse
+    await this.redis.del(otpKey);
+
+    return { resetToken };
+  }
+
+  // forgotPasswordReset: Updates the user's password using a verified reset token.
+  async forgotPasswordReset({ email, resetToken, newPassword }) {
+    const resetTokenKey = `forgot-password:reset-token:${email}`;
+    const storedToken = await this.redis.get(resetTokenKey);
+
+    if (!storedToken || storedToken !== resetToken) {
+      const error = new Error('Invalid or expired reset token');
+      error.code = 'RESET_TOKEN_INVALID';
+      throw error;
+    }
+
+    const user = await this.repository.findUserByEmail(email);
+    if (!user) {
+      const error = new Error('User not found');
+      error.code = 'USER_NOT_FOUND';
+      throw error;
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await this.repository.updatePassword(user.id, passwordHash);
+
+    // Invalidate reset token
+    await this.redis.del(resetTokenKey);
+
+    // Revoke all active sessions for the user to force re-authentication
+    const keysPattern = `session:${user.id}:*`;
+    const sessionKeys = await this.redis.keys(keysPattern);
+    if (sessionKeys.length > 0) {
+      await this.redis.del(...sessionKeys);
+    }
+
     return { success: true };
   }
 }

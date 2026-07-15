@@ -4,7 +4,10 @@ import {
   loginSchema,
   resendOtpSchema,
   refreshSchema,
-  logoutSchema
+  logoutSchema,
+  forgotPasswordRequestSchema,
+  forgotPasswordVerifySchema,
+  forgotPasswordResetSchema
 } from './auth.validator.js';
 import { rateLimit } from '../../middlewares/rateLimit.js';
 
@@ -42,5 +45,23 @@ export default async function authRoutes(fastify, options) {
     schema: logoutSchema,
     preHandler: [fastify.verifyJwt]
   }, controller.logout);
+
+  // Request password reset OTP: Rate-limited to max 3 attempts per 60s per IP
+  fastify.post('/forgot-password/request', {
+    schema: forgotPasswordRequestSchema,
+    preHandler: [rateLimit({ maxAttempts: 3, windowSeconds: 60 })]
+  }, controller.forgotPasswordRequest);
+
+  // Verify password reset OTP: Rate-limited to max 5 attempts per 60s per IP
+  fastify.post('/forgot-password/verify', {
+    schema: forgotPasswordVerifySchema,
+    preHandler: [rateLimit({ maxAttempts: 5, windowSeconds: 60 })]
+  }, controller.forgotPasswordVerify);
+
+  // Reset password: Rate-limited to max 5 attempts per 60s per IP
+  fastify.post('/forgot-password/reset', {
+    schema: forgotPasswordResetSchema,
+    preHandler: [rateLimit({ maxAttempts: 5, windowSeconds: 60 })]
+  }, controller.forgotPasswordReset);
 }
 

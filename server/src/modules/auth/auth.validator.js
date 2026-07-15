@@ -3,12 +3,11 @@
 export const registerSchema = {
   body: {
     type: 'object',
-    required: ['username', 'email', 'password', 'name'],
+    required: ['username', 'email', 'password'],
     properties: {
       username: { type: 'string', minLength: 3, maxLength: 30 },
       email: { type: 'string', pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$' },
-      password: { type: 'string', minLength: 6 },
-      name: { type: 'string', minLength: 1, maxLength: 50 }
+      password: { type: 'string', minLength: 6 }
     }
   }
 };
@@ -73,6 +72,43 @@ export const logoutSchema = {
     required: ['deviceId'],
     properties: {
       deviceId: { type: 'string', minLength: 1 }
+    }
+  }
+};
+
+// forgotPasswordRequestSchema: Defines requirements for requesting a password reset.
+export const forgotPasswordRequestSchema = {
+  body: {
+    type: 'object',
+    required: ['username', 'email'],
+    properties: {
+      username: { type: 'string', minLength: 3, maxLength: 30 },
+      email: { type: 'string', pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$' }
+    }
+  }
+};
+
+// forgotPasswordVerifySchema: Defines requirements for verifying OTP during password reset.
+export const forgotPasswordVerifySchema = {
+  body: {
+    type: 'object',
+    required: ['email', 'otp'],
+    properties: {
+      email: { type: 'string', pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$' },
+      otp: { type: 'string', pattern: '^[0-9]{6}$' }
+    }
+  }
+};
+
+// forgotPasswordResetSchema: Defines requirements for resetting the password with a token.
+export const forgotPasswordResetSchema = {
+  body: {
+    type: 'object',
+    required: ['email', 'resetToken', 'newPassword'],
+    properties: {
+      email: { type: 'string', pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$' },
+      resetToken: { type: 'string', minLength: 1 },
+      newPassword: { type: 'string', minLength: 6 }
     }
   }
 };

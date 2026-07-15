@@ -50,5 +50,23 @@ export class AuthController {
     const result = await this.authService.logout({ userId, deviceId });
     return reply.code(200).send(successResponse(result, 'Logged out successfully'));
   };
+
+  // forgotPasswordRequest: Initiates password reset by checking username & email, generating OTP, and sending email.
+  forgotPasswordRequest = async (request, reply) => {
+    const result = await this.authService.forgotPasswordRequest(request.body);
+    return reply.code(200).send(successResponse(result, 'Password reset OTP sent successfully'));
+  };
+
+  // forgotPasswordVerify: Verifies OTP for password reset and returns a temporary reset token.
+  forgotPasswordVerify = async (request, reply) => {
+    const result = await this.authService.forgotPasswordVerify(request.body);
+    return reply.code(200).send(successResponse(result, 'OTP verified successfully'));
+  };
+
+  // forgotPasswordReset: Performs password reset using a verified reset token.
+  forgotPasswordReset = async (request, reply) => {
+    const result = await this.authService.forgotPasswordReset(request.body);
+    return reply.code(200).send(successResponse(result, 'Password reset successfully'));
+  };
 }
 
