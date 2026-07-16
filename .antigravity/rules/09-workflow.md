@@ -34,7 +34,7 @@ This means:
 ## Prisma schema workflow
 
 See [[10-database-migrations]] for the split between the live schema
-(`server/prisma/schema.prisma`) and the reference schema (`docs/schema.prisma`),
+(`server/prisma/schema.prisma`) and the reference schema (`docs/database/schema.prisma`),
 and which one to edit for a given task. No `server/prisma/migrations/` directory
 exists yet — no tracked migration has ever been generated; schema changes so
 far have presumably gone through `db push` or been applied by hand. Prefer

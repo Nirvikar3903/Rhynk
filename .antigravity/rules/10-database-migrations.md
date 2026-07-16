@@ -6,7 +6,7 @@
   `prisma generate`/`migrate`/`push` actually act on. Today it only defines
   `User`, `Device`, and the `DeviceType` enum, using Prisma's default camelCase
   column mapping (no per-field `@map`).
-- **`docs/schema.prisma`** — a **reference/PRD-derived** schema documenting the
+- **`docs/database/schema.prisma`** — a **reference/PRD-derived** schema documenting the
   full target data model: `User`, `Device`, `UserContact`, `BlockedUser`,
   `Conversation`, `ConversationMember`, `MusicRoom`, `Song`, `Playlist`,
   `PlaylistSong`, `LikedSong`, `Notification`, `NotificationPreference`,
@@ -19,7 +19,7 @@
 up to most of the reference schema's models. When a task needs a new Postgres
 model/field:
 
-1. Check `docs/schema.prisma` first — the target shape (including comments
+1. Check `docs/database/schema.prisma` first — the target shape (including comments
    explaining *why* a field lives where it does, e.g. `Device.fcmToken` living
    on `Device` not `User` for multi-device push) has usually already been
    designed there.
@@ -33,7 +33,7 @@ model/field:
 
 ## Why data is split across three stores
 
-From `docs/schema.prisma`'s own header comment: Postgres is "the SYSTEM OF
+From `docs/database/schema.prisma`'s own header comment: Postgres is "the SYSTEM OF
 RECORD for identity, structure, and relationships." High-write ephemeral data
 (messages, stories, presence, room playback state) intentionally lives
 **outside** Postgres. Concretely:

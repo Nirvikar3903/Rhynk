@@ -58,7 +58,7 @@ stays inside that module's own file — it isn't a plugin.
   rotation locks, live music-room playback state (position, queue, is_playing).
 
 When adding a new piece of state, ask which bucket it belongs to before writing
-code — see the comments in `docs/schema.prisma` (e.g. `MusicRoom` model) for the
+code — see the comments in `docs/database/schema.prisma` (e.g. `MusicRoom` model) for the
 reasoning already worked out for this app. Don't put high-frequency-mutation data
 in Postgres, and don't put durable structural data only in Redis.
 

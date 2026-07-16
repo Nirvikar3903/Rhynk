@@ -9,8 +9,8 @@ only tool-specific wiring (e.g. `CLAUDE.md`) differs.
 ## What Rhynk is
 
 A chat + social-music application: messaging, calls, stories, shared "music rooms",
-media sharing. Source: `docs/Rhynk_PRD_v2.2.pdf`, `docs/rhynk_hld.pdf`,
-`docs/rhynk_lld.pdf`, `docs/Rhynk_Music_Provider_Strategy_Detailed.pdf`.
+media sharing. Source: `docs/product/Rhynk_PRD_v2.2.pdf`, `docs/architecture/rhynk_hld.pdf`,
+`docs/architecture/rhynk_lld.pdf`, `docs/music/Rhynk_Music_Provider_Strategy_Detailed.pdf`.
 
 This repo currently contains **only the backend** (`server/`). There is no
 `client/` app in this repo — it was moved out to a separate `rhynk-client` repo
@@ -53,14 +53,35 @@ the real target — see [[02-naming]] before creating or filling in a module.
 
 ## Deep-dive docs (read these, don't re-derive from scratch)
 
-- `docs/AUTH_MODULE.md` — full auth flow, Redis key space, endpoint-by-endpoint
+- `docs/auth/AUTH_MODULE.md` — full auth flow, Redis key space, endpoint-by-endpoint
   behavior, security gaps. The only fully-implemented module; use it as the
   reference pattern for every new module.
+- `docs/auth/authintgrationsteps.md` — frontend-facing API integration guide for
+  every `/auth` endpoint (payloads, success shapes, error codes to handle).
 - `docs/PROJECT_STRUCTURE.md` — directory layout, module pattern, request
   lifecycle, persistence model.
-- `docs/schema.prisma` — the full PRD-derived reference Postgres schema (all
-  planned models). See [[10-database-migrations]] for how this differs from the
-  live schema.
+- `docs/database/schema.prisma` — the full PRD-derived reference Postgres schema
+  (all planned models). See [[10-database-migrations]] for how this differs from
+  the live schema.
+- `docs/database/rhynk_database_design.pdf` — database design reference.
+- `docs/user/userbackend.md` — user module backend notes.
+
+## Docs folder layout
+
+`docs/` is organized by topic rather than left flat:
+
+```
+docs/
+  auth/          AUTH_MODULE.md, authintgrationsteps.md
+  architecture/  rhynk_hld.pdf, rhynk_lld.pdf
+  database/      schema.prisma, rhynk_database_design.pdf
+  product/       Rhynk_PRD_v2.2.pdf
+  music/         Rhynk_Music_Provider_Strategy_Detailed.pdf
+  user/          userbackend.md
+```
+
+Put new docs under the subfolder matching their topic rather than back at the
+`docs/` root — add a new subfolder only when a doc doesn't fit an existing one.
 
 These docs are snapshots (dated 2026-07-10) — re-verify against the actual code
 for anything load-bearing, the same way this rule set was written.

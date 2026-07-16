@@ -40,12 +40,12 @@ so `this` stays bound when Fastify calls them — see [[04-coding-standards]].
 - Model names: PascalCase singular (`User`, `Device`, `MusicRoom`).
 - Model fields: camelCase (`passwordHash`, `lastActiveAt`).
 - Table names: snake_case plural via `@@map("users")`, `@@map("devices")`.
-- The full reference schema (`docs/schema.prisma`) also maps individual columns
-  to snake_case via `@map("password_hash")`, `@map("device_type")`, etc. The
-  **live** schema (`server/prisma/schema.prisma`) doesn't do this yet — it just
-  uses Prisma's default camelCase columns. When extending the live schema
+- The full reference schema (`docs/database/schema.prisma`) also maps individual
+  columns to snake_case via `@map("password_hash")`, `@map("device_type")`, etc.
+  The **live** schema (`server/prisma/schema.prisma`) doesn't do this yet — it
+  just uses Prisma's default camelCase columns. When extending the live schema
   toward parity with the reference, carry over the `@map`/`@@map` convention
-  from `docs/schema.prisma` rather than inventing a different one. See
+  from `docs/database/schema.prisma` rather than inventing a different one. See
   [[10-database-migrations]].
 - Enum names: PascalCase (`DeviceType`, `ConversationType`); enum values:
   SCREAMING_SNAKE / SCREAMING (`IOS`, `ANDROID`, `WEB`, `NEW_MESSAGE`).
