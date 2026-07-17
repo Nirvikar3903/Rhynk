@@ -19,7 +19,8 @@ export class AuthRepository {
     });
   }
 
-  // createUser: Inserts a new unverified user row with hashed password details.
+  // createUser: Inserts a new unverified user row with hashed password details,
+  // along with its (initially empty) Profile row.
   // Translates a Postgres unique-constraint violation (P2002) into a domain error
   // code instead of letting the raw Prisma error reach the client.
   async createUser({ username, email, passwordHash }) {
@@ -30,6 +31,7 @@ export class AuthRepository {
           email,
           passwordHash,
           isVerified: false,
+          profile: { create: {} },
         },
       });
     } catch (err) {

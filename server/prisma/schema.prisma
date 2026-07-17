@@ -22,10 +22,6 @@ model User {
   passwordHash String?
   googleId     String?  @unique
 
-  avatarUrl    String?
-  bio          String?
-  statusText   String?
-
   isVerified   Boolean  @default(false)
   lastSeenAt   DateTime?
   deletedAt    DateTime?
@@ -34,8 +30,27 @@ model User {
   updatedAt    DateTime @updatedAt
 
   devices      Device[]
+  profile      Profile?
 
   @@map("users")
+}
+
+// Profile: split from User so identity/auth fields (credentials, verification)
+// stay separate from mutable display fields (avatar, bio, status). 1:1 with User,
+// created alongside it at registration so callers can always assume it exists.
+model Profile {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  avatarUrl  String?
+  bio        String?
+  statusText String?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
 }
 
 model Device {

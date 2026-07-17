@@ -1,3 +1,16 @@
+// flattenProfile: User and Profile are separate tables (see schema.prisma), but the
+// API contract keeps avatarUrl/bio/statusText as top-level fields — this merges the
+// nested `profile` relation back into a flat shape for responses.
+function flattenProfile(user) {
+  const { profile, ...rest } = user;
+  return {
+    ...rest,
+    avatarUrl: profile?.avatarUrl ?? null,
+    bio: profile?.bio ?? null,
+    statusText: profile?.statusText ?? null
+  };
+}
+
 export class UserService {
   constructor(repository) {
     this.repository = repository;
@@ -12,7 +25,7 @@ export class UserService {
       throw error;
     }
     // Omit sensitive credential fields
-    const { passwordHash, googleId, deletedAt, ...profile } = user;
+    const { passwordHash, googleId, deletedAt, ...profile } = flattenProfile(user);
     return profile;
   }
 
@@ -28,7 +41,7 @@ export class UserService {
     }
 
     const updatedUser = await this.repository.updateProfile(userId, updateData);
-    const { passwordHash, googleId, deletedAt, ...profile } = updatedUser;
+    const { passwordHash, googleId, deletedAt, ...profile } = flattenProfile(updatedUser);
     return profile;
   }
 
@@ -41,16 +54,8 @@ export class UserService {
       throw error;
     }
 
-    return {
-      id: user.id,
-      username: user.username,
-      name: user.name,
-      avatarUrl: user.avatarUrl,
-      bio: user.bio,
-      statusText: user.statusText,
-      lastSeenAt: user.lastSeenAt,
-      createdAt: user.createdAt
-    };
+    const { id, username, name, avatarUrl, bio, statusText, lastSeenAt, createdAt } = flattenProfile(user);
+    return { id, username, name, avatarUrl, bio, statusText, lastSeenAt, createdAt };
   }
 
   // searchUsers: Searches for users matching a query prefix.
@@ -58,6 +63,7 @@ export class UserService {
     if (!query || query.trim() === '') {
       return [];
     }
-    return this.repository.searchUsers(query.trim());
+    const users = await this.repository.searchUsers(query.trim());
+    return users.map(flattenProfile);
   }
 }

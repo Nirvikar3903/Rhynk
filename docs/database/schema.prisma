@@ -77,10 +77,6 @@ model User {
   passwordHash String? @map("password_hash") // null for phone-OTP-only / OAuth-only users
   googleId    String?  @unique @map("google_id")
 
-  avatarUrl   String?  @map("avatar_url")
-  bio         String?  @db.VarChar(160)
-  statusText  String?  @map("status_text") @db.VarChar(120)
-
   isVerified  Boolean  @default(false) @map("is_verified")
   lastSeenAt  DateTime? @map("last_seen_at")
 
@@ -91,6 +87,7 @@ model User {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
+  profile              Profile?
   devices              Device[]
   createdConversations Conversation[]        @relation("ConversationCreator")
   memberships          ConversationMember[]
@@ -110,6 +107,24 @@ model User {
   @@index([phone])
   @@index([email])
   @@map("users")
+}
+
+// Profile: split from User so identity/auth fields (credentials, verification)
+// stay separate from mutable display fields. 1:1 with User, created alongside it
+// at registration so callers can always assume it exists.
+model Profile {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @unique @map("user_id") @db.Uuid
+  avatarUrl  String?  @map("avatar_url")
+  bio        String?  @db.VarChar(160)
+  statusText String?  @map("status_text") @db.VarChar(120)
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
 }
 
 // Multi-device support: one user, many logged-in devices.
