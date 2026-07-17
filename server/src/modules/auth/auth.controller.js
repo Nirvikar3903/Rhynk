@@ -51,7 +51,7 @@ export class AuthController {
     return reply.code(200).send(successResponse(result, 'Logged out successfully'));
   };
 
-  // forgotPasswordRequest: Initiates password reset by checking username & email, generating OTP, and sending email.
+  // forgotPasswordRequest: Initiates password reset by checking email, generating OTP, and sending email.
   forgotPasswordRequest = async (request, reply) => {
     const result = await this.authService.forgotPasswordRequest(request.body);
     return reply.code(200).send(successResponse(result, 'Password reset OTP sent successfully'));

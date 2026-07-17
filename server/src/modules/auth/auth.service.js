@@ -259,12 +259,12 @@ export class AuthService {
   }
 
   // forgotPasswordRequest: Handles requesting a password reset OTP.
-  // Verifies that a user exists with matching username and email, and that they are verified.
-  async forgotPasswordRequest({ username, email }) {
+  // Verifies that a user exists with this email and is verified.
+  async forgotPasswordRequest({ email }) {
     const user = await this.repository.findUserByEmail(email);
 
-    if (!user || user.username !== username) {
-      const error = new Error('Invalid email or username');
+    if (!user) {
+      const error = new Error('Invalid email');
       error.code = 'INVALID_CREDENTIALS';
       throw error;
     }

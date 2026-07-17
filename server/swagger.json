@@ -488,7 +488,7 @@
     "/auth/forgot-password/request": {
       "post": {
         "summary": "Request password reset OTP",
-        "description": "Validates username and email. If correct, generates a 6-digit OTP code, stores it in Redis, and sends an email to the user.",
+        "description": "Validates email. If a verified account exists, generates a 6-digit OTP code, stores it in Redis, and sends an email to the user.",
         "requestBody": {
           "required": true,
           "content": {
@@ -496,16 +496,9 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "username",
                   "email"
                 ],
                 "properties": {
-                  "username": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 30,
-                    "example": "john_doe"
-                  },
                   "email": {
                     "type": "string",
                     "format": "email",
@@ -528,7 +521,7 @@
             }
           },
           "401": {
-            "description": "Invalid email or username (INVALID_CREDENTIALS)",
+            "description": "Invalid email (INVALID_CREDENTIALS)",
             "content": {
               "application/json": {
                 "schema": {

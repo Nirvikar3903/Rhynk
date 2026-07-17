@@ -183,12 +183,11 @@ Revokes a user session for a specific device, invalidating the refresh token.
 ---
 
 ### 7. Forgot Password - Request OTP (`POST /auth/forgot-password/request`)
-Requests a password reset OTP by verifying email and username.
+Requests a password reset OTP by email.
 
 * **Payload**:
   ```json
   {
-    "username": "john_doe",
     "email": "john@example.com"
   }
   ```
@@ -203,7 +202,7 @@ Requests a password reset OTP by verifying email and username.
   }
   ```
 * **Errors to Handle**:
-  * `401 Unauthorized` (`INVALID_CREDENTIALS`): The username and email do not match.
+  * `401 Unauthorized` (`INVALID_CREDENTIALS`): No account exists with this email.
   * `403 Forbidden` (`EMAIL_NOT_VERIFIED`): The account is not verified yet.
   * `429 Too Many Requests` (`OTP_COOLDOWN`): A cooldown limit of 30 seconds is active.
 

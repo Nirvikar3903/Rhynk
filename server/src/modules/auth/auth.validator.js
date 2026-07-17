@@ -80,9 +80,8 @@ export const logoutSchema = {
 export const forgotPasswordRequestSchema = {
   body: {
     type: 'object',
-    required: ['username', 'email'],
+    required: ['email'],
     properties: {
-      username: { type: 'string', minLength: 3, maxLength: 30 },
       email: { type: 'string', pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$' }
     }
   }
