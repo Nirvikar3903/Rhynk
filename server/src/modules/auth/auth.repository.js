@@ -20,15 +20,29 @@ export class AuthRepository {
   }
 
   // createUser: Inserts a new unverified user row with hashed password details.
+  // Translates a Postgres unique-constraint violation (P2002) into a domain error
+  // code instead of letting the raw Prisma error reach the client.
   async createUser({ username, email, passwordHash }) {
-    return this.prisma.user.create({
-      data: {
-        username,
-        email,
-        passwordHash,
-        isVerified: false,
-      },
-    });
+    try {
+      return await this.prisma.user.create({
+        data: {
+          username,
+          email,
+          passwordHash,
+          isVerified: false,
+        },
+      });
+    } catch (err) {
+      if (err.code === 'P2002') {
+        const target = Array.isArray(err.meta?.target) ? err.meta.target : [err.meta?.target];
+        const error = new Error(
+          target.includes('username') ? 'Username is already taken' : 'Email is already registered'
+        );
+        error.code = target.includes('username') ? 'USERNAME_TAKEN' : 'EMAIL_TAKEN';
+        throw error;
+      }
+      throw err;
+    }
   }
 
   // verifyUser: Sets the isVerified flag of a user to true after successful OTP verification.

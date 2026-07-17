@@ -50,6 +50,7 @@
             "nullable": true,
             "enum": [
               "EMAIL_TAKEN",
+              "USERNAME_TAKEN",
               "OTP_COOLDOWN",
               "OTP_INVALID",
               "USER_NOT_FOUND",
@@ -116,7 +117,7 @@
             }
           },
           "409": {
-            "description": "Email is already taken (EMAIL_TAKEN)",
+            "description": "Email is already registered to a verified account (EMAIL_TAKEN), or the username is already taken by another account (USERNAME_TAKEN)",
             "content": {
               "application/json": {
                 "schema": {

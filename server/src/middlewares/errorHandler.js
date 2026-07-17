@@ -19,14 +19,18 @@ export function errorHandler(error, request, reply) {
   const code = error.code || null;
   const status = CODE_TO_STATUS[code] || error.statusCode || 500;
 
+  // Any error that isn't a recognized business error code or a known Fastify
+  // validation/statusCode error is unexpected — log the real error server-side
+  // but never leak its raw message (Prisma/Mongo/driver internals, stack traces) to the client.
   if (status >= 500) {
     request.log.error({ err: error }, 'Unexpected server error');
+    return reply.code(500).send(errorResponse('Internal Server Error', null));
   }
 
   // Handle Fastify validation errors gracefully if present
-  const message = error.validation 
+  const message = error.validation
     ? `Validation Error: ${error.validation.map(e => `${e.instancePath || ''} ${e.message}`).join(', ')}`
-    : error.message || 'Internal Server Error';
+    : error.message || 'Something went wrong';
 
   return reply.code(status).send(errorResponse(message, code));
 }
