@@ -112,3 +112,16 @@ export const forgotPasswordResetSchema = {
   }
 };
 
+// googleLoginSchema: Defines requirements for signing in/registering with Google.
+export const googleLoginSchema = {
+  body: {
+    type: 'object',
+    required: ['idToken', 'deviceId', 'deviceType'],
+    properties: {
+      idToken: { type: 'string', minLength: 1 },
+      deviceId: { type: 'string', minLength: 1 },
+      deviceType: { type: 'string', enum: ['IOS', 'ANDROID', 'WEB'] }
+    }
+  }
+};
+

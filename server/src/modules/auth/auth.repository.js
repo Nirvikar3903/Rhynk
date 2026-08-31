@@ -19,6 +19,41 @@ export class AuthRepository {
     });
   }
 
+  // findUserByGoogleId: Queries the database for a user matching a unique Google ID.
+  async findUserByGoogleId(googleId) {
+    return this.prisma.user.findUnique({
+      where: { googleId },
+    });
+  }
+
+  // createGoogleUser: Inserts a new user registered via Google Sign-In, 
+  // marked as pre-verified (no password needed), along with its profile.
+  async createGoogleUser({ username, email, name, googleId }) {
+    try {
+      return await this.prisma.user.create({
+        data: {
+          username,
+          email,
+          name,
+          googleId,
+          isVerified: true,
+          profile: { create: {} },
+        },
+      });
+    } catch (err) {
+      if (err.code === 'P2002') {
+        const target = Array.isArray(err.meta?.target) ? err.meta.target : [err.meta?.target];
+        const error = new Error(
+          target.includes('username') ? 'Username is already taken' : 'Email is already registered'
+        );
+        error.code = target.includes('username') ? 'USERNAME_TAKEN' : 'EMAIL_TAKEN';
+        throw error;
+      }
+      throw err;
+    }
+  }
+
+
   // createUser: Inserts a new unverified user row with hashed password details,
   // along with its (initially empty) Profile row.
   // Translates a Postgres unique-constraint violation (P2002) into a domain error

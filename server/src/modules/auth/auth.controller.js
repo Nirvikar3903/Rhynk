@@ -28,6 +28,13 @@ export class AuthController {
     return reply.code(200).send(successResponse(result, 'Login successful'));
   };
 
+  // googleLogin: Verifies a Google idToken, registers/links the user,
+  // and issues standard JWT access & refresh tokens.
+  googleLogin = async (request, reply) => {
+    const result = await this.authService.googleLogin(request.body);
+    return reply.code(200).send(successResponse(result, 'Google login successful'));
+  };
+
   // resendOtp: Generates and emails a new verification OTP if the user didn't receive the first one,
   // subject to a 60-second cooldown to prevent spam.
   resendOtp = async (request, reply) => {

@@ -5,7 +5,8 @@ const reqEnvVariables = [
     'MONGODB_URI',
     'REDIS_URL',
     'JWT_ACCESS_SECRET',
-    'JWT_REFRESH_SECRET'
+    'JWT_REFRESH_SECRET',
+    'GOOGLE_CLIENT_ID'
 ];
 
 for(const key of reqEnvVariables){
@@ -25,6 +26,7 @@ const env = {
 
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 
   SMTP_HOST: process.env.SMTP_HOST,
   SMTP_PORT: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined,

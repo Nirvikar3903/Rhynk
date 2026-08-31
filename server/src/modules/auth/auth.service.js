@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import { hashPassword, comparePassword } from '../../utils/hash.util.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt.util.js';
+import { OAuth2Client } from 'google-auth-library';
+import env from '../../config/env.js';
 
 // Expiry and cooldown configurations in seconds
 const OTP_TTL_SECONDS = 180; // OTP is valid for 3 minutes (180 seconds)
@@ -151,6 +153,94 @@ export class AuthService {
     }
 
     const tokens = await this.issueTokens({ userId: user.id, deviceId, deviceType });
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isVerified: true
+      }
+    };
+  }
+
+  // googleLogin: Verifies a Google idToken, registers/links the user, and issues session tokens.
+  async googleLogin({ idToken, deviceId, deviceType }) {
+    const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
+    let payload;
+
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch (err) {
+      const error = new Error('Invalid Google ID token');
+      error.code = 'GOOGLE_TOKEN_INVALID';
+      throw error;
+    }
+
+    const { sub: googleId, email, name } = payload;
+
+    if (!email) {
+      const error = new Error('Google account is missing an email address');
+      error.code = 'GOOGLE_EMAIL_MISSING';
+      throw error;
+    }
+
+    // 1. Check if user already exists by googleId (returning Google user)
+    let user = await this.repository.findUserByGoogleId(googleId);
+
+    if (!user) {
+      // 2. Check if the email belongs to a password-registered account.
+      //    Google Sign-In and email/password are separate auth methods — do NOT merge them.
+      const existingEmailUser = await this.repository.findUserByEmail(email);
+      if (existingEmailUser) {
+        const error = new Error('An account with this email already exists. Please sign in with your email and password.');
+        error.code = 'EMAIL_AUTH_CONFLICT';
+        throw error;
+      }
+
+      // 3. Brand new user — create a Google account
+      // Auto-generate a username from their email prefix (sanitized, max 20 chars)
+      const emailPrefix = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+      let isUnique = false;
+      let attempts = 0;
+
+      while (!isUnique && attempts < 10) {
+        try {
+          const username = attempts === 0 ? emailPrefix : `${emailPrefix}${Math.floor(1000 + Math.random() * 9000)}`;
+          user = await this.repository.createGoogleUser({
+            username,
+            email,
+            name: name || null,
+            googleId,
+          });
+          isUnique = true;
+        } catch (err) {
+          if (err.code === 'USERNAME_TAKEN') {
+            attempts++;
+          } else {
+            throw err;
+          }
+        }
+      }
+
+      if (!isUnique) {
+        const error = new Error('Failed to generate a unique username for Google sign-in');
+        error.code = 'USERNAME_GENERATION_FAILED';
+        throw error;
+      }
+
+      // Send a welcome email asynchronously — don't block the response
+      this.sendEmail(user.email, 'welcome_email', { username: user.name || user.username || user.email })
+        .catch(err => console.error('Failed to send welcome email:', err));
+    }
+
+    // 4. Issue access & refresh tokens
+    const tokens = await this.issueTokens({ userId: user.id, deviceId, deviceType });
+
     return {
       ...tokens,
       user: {

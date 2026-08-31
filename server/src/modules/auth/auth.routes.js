@@ -7,7 +7,8 @@ import {
   logoutSchema,
   forgotPasswordRequestSchema,
   forgotPasswordVerifySchema,
-  forgotPasswordResetSchema
+  forgotPasswordResetSchema,
+  googleLoginSchema
 } from './auth.validator.js';
 import { rateLimit } from '../../middlewares/rateLimit.js';
 
@@ -33,6 +34,12 @@ export default async function authRoutes(fastify, options) {
     schema: loginSchema,
     preHandler: [rateLimit({ maxAttempts: 5, windowSeconds: 60 })]
   }, controller.login);
+
+  // Google Sign In / Registration: Rate-limited to max 5 attempts per 60s per IP
+  fastify.post('/google', {
+    schema: googleLoginSchema,
+    preHandler: [rateLimit({ maxAttempts: 5, windowSeconds: 60 })]
+  }, controller.googleLogin);
 
   // Resend Sign Up Verification OTP
   fastify.post('/resend-otp', { schema: resendOtpSchema }, controller.resendOtp);
