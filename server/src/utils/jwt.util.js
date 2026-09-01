@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import env from '../config/env.js';
 
-const ACCESS_TOKEN_EXPIRY = '15m';
+const ACCESS_TOKEN_EXPIRY = '30m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 
 export function signAccessToken(payload) {

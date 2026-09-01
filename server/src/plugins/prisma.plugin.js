@@ -5,8 +5,12 @@ const { PrismaClient } = pkg;
 async function prismaPlugin(fastify) {
   const prisma = new PrismaClient();
 
-  await prisma.$connect();
-  fastify.log.info("✅ Postgres (Prisma) connected");
+  try {
+    await prisma.$connect();
+  } catch (err) {
+    console.error("❌ Postgres (Prisma) connection error:", err.message);
+    throw err;
+  }
 
   fastify.decorate("prisma", prisma);
 

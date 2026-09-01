@@ -3,13 +3,14 @@ import mongoose from "mongoose";
 import env from "../config/env.js";
 
 async function mongoosePlugin(fastify) {
-  fastify.log.info("Connecting to MongoDB...");
-
-  await mongoose.connect(env.MONGODB_URI, {
-    serverSelectionTimeoutMS: 20000,
-  });
-
-  fastify.log.info("✅ MongoDB connected");
+  try {
+    await mongoose.connect(env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 20000,
+    });
+  } catch (err) {
+    console.error("❌ MongoDB connection error:", err.message);
+    throw err;
+  }
 
   fastify.decorate("mongo", mongoose.connection);
 

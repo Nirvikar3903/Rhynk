@@ -30,6 +30,7 @@ import authPlugin from "./plugins/auth.plugin.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import authIndex from "./modules/auth/authIndex.js";
 import userIndex from "./modules/user/userIndex.js";
+import messagingIndex from "./modules/message/messagingIndex.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,7 +38,7 @@ const swaggerPath = path.join(__dirname, "../swagger.json");
 
 export async function buildApp() {
   const app = Fastify({
-    logger: true,
+    logger: { level: 'error' },
   });
 
   await app.register(prismaPlugin);
@@ -49,6 +50,7 @@ export async function buildApp() {
   app.setErrorHandler(errorHandler);
   await app.register(authIndex);
   await app.register(userIndex);
+  await app.register(messagingIndex);
 
   app.get("/swagger.json", async (req, reply) => {
     try {

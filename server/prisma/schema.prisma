@@ -13,6 +13,17 @@ enum DeviceType {
   WEB
 }
 
+enum ConversationType {
+  DIRECT
+  GROUP
+  CHANNEL
+}
+
+enum MemberRole {
+  ADMIN
+  MEMBER
+}
+
 model User {
   id           String   @id @default(uuid())
   username     String   @unique
@@ -29,8 +40,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  devices      Device[]
-  profile      Profile?
+  devices              Device[]
+  profile              Profile?
+  createdConversations Conversation[]        @relation("ConversationCreator")
+  memberships          ConversationMember[]
 
   @@map("users")
 }
@@ -66,4 +79,38 @@ model Device {
 
   @@index([userId])
   @@map("devices")
+}
+
+model Conversation {
+  id        String           @id @default(uuid())
+  type      ConversationType
+  name      String?
+  avatarUrl String?
+  createdBy String
+  createdAt DateTime         @default(now())
+
+  creator User                 @relation("ConversationCreator", fields: [createdBy], references: [id])
+  members ConversationMember[]
+
+  @@index([type])
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String     @id @default(uuid())
+  conversationId String
+  userId         String
+  role           MemberRole @default(MEMBER)
+  isPinned       Boolean    @default(false)
+  isMuted        Boolean    @default(false)
+  isArchived     Boolean    @default(false)
+  joinedAt       DateTime   @default(now())
+  lastReadAt     DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_members")
 }

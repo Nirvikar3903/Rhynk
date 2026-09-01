@@ -10,10 +10,10 @@ const start = async () => {
       port: env.PORT,
       host: "0.0.0.0",
     });
-    app.log.info(`🚀 Rhynk server running on http://localhost:${env.PORT}`);
-    app.log.info(`📋 Swagger documentation available at http://localhost:${env.PORT}/docs`);
+    console.log(`\n🚀 Rhynk server running on http://localhost:${env.PORT}`);
+    console.log(`📋 API Docs: http://localhost:${env.PORT}/docs\n`);
   } catch (error) {
-    console.error(error);
+    console.error("❌ Server failed to start:", error.message);
     process.exit(1);
   }
 };

@@ -77,7 +77,6 @@ async function autoSeedTemplates(fastify) {
   ];
 
   try {
-    fastify.log.info('Running automatic template sync in MongoDB...');
     for (const template of templates) {
       await EmailTemplate.findOneAndUpdate(
         { key: template.key },
@@ -91,9 +90,8 @@ async function autoSeedTemplates(fastify) {
         await fastify.redis.del(redisKey);
       }
     }
-    fastify.log.info('✅ Email templates synced and Redis cache cleared successfully');
   } catch (err) {
-    fastify.log.error({ err }, 'Failed to run automatic email template sync');
+    console.error('❌ Failed to run automatic email template sync:', err.message);
   }
 }
 
